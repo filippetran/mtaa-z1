@@ -244,7 +244,7 @@ class UDPHandler(socketserver.BaseRequestHandler):
         if expires == 0:
             if fromm in registrar:
                 del registrar[fromm]
-                self.sendResponse("200 0K")
+                self.sendResponse("200 OK - Poziadavka uspesna")
                 return
         else:
             now = int(time.time())
@@ -255,7 +255,7 @@ class UDPHandler(socketserver.BaseRequestHandler):
         logging.debug("Expires= %d" % expires)
         registrar[fromm] = [contact, self.socket, self.client_address, validity]
         self.debugRegister()
-        self.sendResponse("200 0K")
+        self.sendResponse("200 OK - Poziadavka uspesna")
 
     def processInvite(self):
         logging.debug("-----------------")
@@ -263,7 +263,7 @@ class UDPHandler(socketserver.BaseRequestHandler):
         logging.debug("-----------------")
         origin = self.getOrigin()
         if len(origin) == 0 or origin not in registrar:
-            self.sendResponse("400 Bad Request")
+            self.sendResponse("400 Chybna poziadavka")
             return
         destination = self.getDestination()
         if len(destination) > 0:
@@ -280,9 +280,9 @@ class UDPHandler(socketserver.BaseRequestHandler):
                 logging.info("<<< %s" % data[0])
                 logging.debug("---\n<< server send [%d]:\n%s\n---" % (len(text), text))
             else:
-                self.sendResponse("480 Temporarily Unavailable")
+                self.sendResponse("480 Nedostupny")
         else:
-            self.sendResponse("500 Server Internal Error")
+            self.sendResponse("500 Chyba servera")
 
     def processAck(self):
         logging.debug("--------------")
@@ -310,7 +310,7 @@ class UDPHandler(socketserver.BaseRequestHandler):
         logging.debug("----------------------")
         origin = self.getOrigin()
         if len(origin) == 0 or origin not in registrar:
-            self.sendResponse("400 Bad Request")
+            self.sendResponse("400 Chybna poziadavka")
             return
         destination = self.getDestination()
         if len(destination) > 0:
@@ -329,7 +329,7 @@ class UDPHandler(socketserver.BaseRequestHandler):
             else:
                 self.sendResponse("406 Not Acceptable")
         else:
-            self.sendResponse("500 Server Internal Error")
+            self.sendResponse("500 Chyba servera")
 
     def processCode(self):
         origin = self.getOrigin()
@@ -340,6 +340,16 @@ class UDPHandler(socketserver.BaseRequestHandler):
                 self.data = self.removeRouteHeader()
                 data = self.removeTopVia()
                 text = "\r\n".join(data)
+                if "100 Trying" in text:
+                    text = text.replace("Trying", "Skusam")
+                elif "180 Ringing" in text:
+                    text = text.replace("Ringing", "Zvonim")
+                elif "603 Decline" in text:
+                    text = text.replace("Decline", "Hovor zamietnuty")
+                elif "487 Request terminated" in text:
+                    text = text.replace("Request terminated", "Hovor zruseny")
+                elif "486 Busy here" in text:
+                    text = text.replace("Busy here", "Adresat je zaneprazdneny")
                 socket.sendto(text.encode(), claddr)
                 showtime()
                 logging.info("<<< %s" % data[0])
@@ -371,11 +381,11 @@ class UDPHandler(socketserver.BaseRequestHandler):
             elif rx_update.search(request_uri):
                 self.processNonInvite()
             elif rx_subscribe.search(request_uri):
-                self.sendResponse("200 0K")
+                self.sendResponse("200 OK - Poziadavka uspesna")
             elif rx_publish.search(request_uri):
-                self.sendResponse("200 0K")
+                self.sendResponse("200 OK - Poziadavka uspesna")
             elif rx_notify.search(request_uri):
-                self.sendResponse("200 0K")
+                self.sendResponse("200 OK - Poziadavka uspesna")
             elif rx_code.search(request_uri):
                 self.processCode()
             else:
